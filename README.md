@@ -1,7 +1,7 @@
 # visalizing-energy-langrangian-hamiltonian-of-harmonic-oscillator
 
-Explore Kinetic Energy, Potential Energy, Lagrangian, and Hamiltonian with Real-time Graphs and Equations
+Explore Kinetic Energy, Potential Energy, Lagrangian, and Hamiltonian of Harmonic Oscillator with Real-time Graphs and Equations
 
-![image](https://github.com/user-attachments/assets/ff19d7d1-933e-44a3-93a3-0efa956c6f5d)
+![image](https://github.com/user-attachments/assets/37f91c16-e431-45d3-b6e7-9bbdbccdbd21)
 
 open html file in browser
