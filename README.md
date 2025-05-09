@@ -1,6 +1,6 @@
-# visalizing-energy-langrangian-hamiltonian-action-of-harmonic-oscillator
+# visalizing-energy-langrangian-hamiltonian-action
 
-Explore Kinetic Energy, Potential Energy, Lagrangian, Hamiltonian, Action of Harmonic Oscillator with Real-time Graphs and Equations
+Explore Kinetic Energy, Potential Energy, Lagrangian, Hamiltonian, Action with Real-time Graphs and Equations
 
 ![image](https://github.com/user-attachments/assets/37f91c16-e431-45d3-b6e7-9bbdbccdbd21)
 
