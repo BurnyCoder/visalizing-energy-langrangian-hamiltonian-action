@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Harmonic Oscillator Simulation with Graphs</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; overflow-x: hidden; }
+        .control-panel { background-color: #f9fafb; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); }
+        .data-display dt { font-weight: 600; color: #4b5563; }
+        .data-display dd { color: #1f2937; }
+        #simulationCanvas { display: block; width: 100%; height: 100%; border-radius: 0.5rem; background-color: #e5e7eb; }
+        input[type="range"]::-webkit-slider-thumb { appearance: none; -webkit-appearance: none; width: 20px; height: 20px; background: #3b82f6; border-radius: 50%; cursor: pointer; }
+        input[type="range"]::-moz-range-thumb { width: 20px; height: 20px; background: #3b82f6; border-radius: 50%; cursor: pointer; border: none; }
+        .btn { padding: 0.5rem 1rem; border-radius: 0.375rem; font-weight: 600; transition: background-color 0.2s; }
+        .btn-primary { background-color: #3b82f6; color: white; }
+        .btn-primary:hover { background-color: #2563eb; }
+        .btn-secondary { background-color: #6b7280; color: white; }
+        .btn-secondary:hover { background-color: #4b5563; }
+        .btn-warning { background-color: #f59e0b; color: white; }
+        .btn-warning:hover { background-color: #d97706; }
+        .chart-container { background-color: #ffffff; border-radius: 0.5rem; padding: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        /* Styling for the new plain text equations panel */
+        .equations-plain-panel { background-color: #ffffff; border-radius: 0.5rem; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-top: 1.5rem; }
+        .equations-plain-panel h3 { font-size: 1.1rem; font-weight: 600; margin-top: 1rem; margin-bottom: 0.5rem; color: #374151; }
+        .equations-plain-panel p { margin-bottom: 0.5rem; line-height: 1.6; color: #4b5563; }
+        .equations-plain-panel .equation-text { font-family: 'Consolas', 'Monaco', monospace; color: #1e293b; background-color: #f8fafc; padding: 0.25rem 0.5rem; border-radius: 0.25rem; display: inline-block; margin-top: 0.25rem; margin-bottom: 0.5rem; }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-100 text-gray-800">
+    <div class="container mx-auto p-4 max-w-7xl">
+        <header class="mb-6 text-center">
+            <h1 class="text-3xl font-bold text-gray-700">Simple Harmonic Oscillator Simulation</h1>
+            <p class="text-md text-gray-600">Explore Kinetic Energy, Potential Energy, Lagrangian, and Hamiltonian with Real-time Graphs and Equations</p>
+        </header>
+
+        <div class="flex flex-col lg:flex-row gap-6">
+            <div class="lg:w-1/3 control-panel p-6 space-y-6 self-start">
+                <div>
+                    <h2 class="text-xl font-semibold mb-4 text-gray-700">Parameters</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="mass" class="block text-sm font-medium text-gray-700">Mass (m): <span id="massValue">1.0</span> kg</label>
+                            <input type="range" id="mass" min="0.1" max="10" value="1.0" step="0.1" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                        <div>
+                            <label for="springConstant" class="block text-sm font-medium text-gray-700">Spring Constant (k): <span id="kValue">10</span> N/m</label>
+                            <input type="range" id="springConstant" min="1" max="100" value="10" step="1" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                        <div>
+                            <label for="initialPosition" class="block text-sm font-medium text-gray-700">Initial Position (x₀): <span id="x0Value">2.0</span> m</label>
+                            <input type="range" id="initialPosition" min="-5" max="5" value="2.0" step="0.1" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                        <div>
+                            <label for="initialVelocity" class="block text-sm font-medium text-gray-700">Initial Velocity (v₀): <span id="v0Value">0.0</span> m/s</label>
+                            <input type="range" id="initialVelocity" min="-5" max="5" value="0.0" step="0.1" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex space-x-3">
+                    <button id="startButton" class="btn btn-primary flex-1">Start</button>
+                    <button id="stopButton" class="btn btn-secondary flex-1" disabled>Stop</button>
+                    <button id="resetButton" class="btn btn-warning flex-1">Reset</button>
+                </div>
+
+                <div>
+                    <h2 class="text-xl font-semibold mb-3 text-gray-700">Real-time Data</h2>
+                    <dl class="data-display grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                        <dt>Position (x):</dt><dd><span id="currentX">0.00</span> m</dd>
+                        <dt>Velocity (v):</dt><dd><span id="currentV">0.00</span> m/s</dd>
+                        <dt>Kinetic Energy (T):</dt><dd><span id="kineticEnergy">0.00</span> J</dd>
+                        <dt>Potential Energy (V):</dt><dd><span id="potentialEnergy">0.00</span> J</dd>
+                        <dt>Lagrangian (L):</dt><dd><span id="lagrangian">0.00</span> J</dd>
+                        <dt>Hamiltonian (H):</dt><dd><span id="hamiltonian">0.00</span> J</dd>
+                        <dt>Time (t):</dt><dd><span id="currentTime">0.00</span> s</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="lg:w-2/3">
+                 <div id="canvasContainer" class="w-full h-96 lg:h-[500px] rounded-lg overflow-hidden shadow-lg">
+                    <canvas id="simulationCanvas"></canvas>
+                </div>
+                </div>
+        </div>
+
+        <div class="mt-8">
+            <h2 class="text-2xl font-semibold mb-4 text-center text-gray-700">Dynamic Graphs</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="chart-container"><canvas id="positionChart"></canvas></div>
+                <div class="chart-container"><canvas id="velocityChart"></canvas></div>
+                <div class="chart-container"><canvas id="kineticEnergyChart"></canvas></div>
+                <div class="chart-container"><canvas id="potentialEnergyChart"></canvas></div>
+                <div class="chart-container"><canvas id="lagrangianChart"></canvas></div>
+                <div class="chart-container"><canvas id="hamiltonianChart"></canvas></div>
+            </div>
+        </div>
+
+        <div class="equations-plain-panel mt-8"> <h2 class="text-xl font-semibold mb-4 text-gray-700 text-center">Governing Equations & Definitions (Plain Text)</h2>
+            
+            <p>The motion of a simple harmonic oscillator (mass 'm' on a spring with spring constant 'k') is primarily described by Newton's second law, which relates force, mass, and acceleration:</p>
+            <p class="equation-text">Force (F) = mass (m) * acceleration (a)</p>
+            <p>For a spring that obeys Hooke's Law, the restoring force is proportional to the displacement 'x' from equilibrium: F = -k*x. Combining this with Newton's second law (where acceleration 'a' is the second time derivative of position, d^2x/dt^2):</p>
+            <p class="equation-text">-k*x = m*(d^2x/dt^2)</p>
+            <p>This is the fundamental equation of motion for the undamped simple harmonic oscillator. It can be rearranged as:</p>
+            <p class="equation-text">(d^2x/dt^2) + (k/m)*x = 0</p>
+            <p>We often define the angular frequency 'omega' (ω) as:</p>
+            <p class="equation-text">omega = sqrt(k/m)</p>
+            <p>Using omega, the equation of motion becomes:</p>
+            <p class="equation-text">(d^2x/dt^2) + omega^2*x = 0</p>
+            
+            <h3>Position (x) and Velocity (v)</h3>
+            <p>The <strong>position (x)</strong> is the displacement of the mass from its equilibrium point. The <strong>velocity (v)</strong> is the rate of change of this position with respect to time (the first time derivative of x):</p>
+            <p class="equation-text">v = dx/dt</p>
+            <p>In this simulation, these values are calculated numerically step-by-step.</p>
+            
+            <h3>Kinetic Energy (T)</h3>
+            <p>Kinetic energy is the energy possessed by the mass due to its motion. It is defined as:</p>
+            <p class="equation-text">T = (1/2) * m * v^2</p>
+            
+            <h3>Potential Energy (V)</h3>
+            <p>Potential energy is the energy stored in the spring as it is stretched or compressed. For a spring obeying Hooke's Law, it is:</p>
+            <p class="equation-text">V = (1/2) * k * x^2</p>
+            
+            <h3>Lagrangian (L)</h3>
+            <p>The Lagrangian is a function used in classical mechanics to derive the equations of motion. For simple conservative systems like this oscillator, it is defined as the kinetic energy minus the potential energy:</p>
+            <p class="equation-text">L = T - V</p>
+            <p class="equation-text">L = (1/2) * m * v^2 - (1/2) * k * x^2</p>
+            
+            <h3>Hamiltonian (H)</h3>
+            <p>The Hamiltonian is another important function in classical mechanics, often representing the total energy of the system. For this conservative system, it is the sum of the kinetic and potential energies:</p>
+            <p class="equation-text">H = T + V</p>
+            <p class="equation-text">H = (1/2) * m * v^2 + (1/2) * k * x^2</p>
+            <p>In an ideal (undamped) simple harmonic oscillator, the Hamiltonian (total energy) is conserved, meaning its value remains constant over time.</p>
+        </div>
+
+    </div> <script>
+        // Three.js components
+        let scene, camera, renderer;
+        let massMesh, springMesh, anchorMesh;
+        
+        // Chart.js components
+        let positionChart, velocityChart, kineticEnergyChart, potentialEnergyChart, lagrangianChart, hamiltonianChart;
+        const chartMaxDataPoints = 200; // Max data points to display on charts
+
+        // Simulation parameters
+        const params = {
+            m: 1.0,      // mass
+            k: 10.0,     // spring constant
+            x0: 2.0,     // initial position
+            v0: 0.0,     // initial velocity
+        };
+
+        // Simulation state
+        const state = {
+            x: 0.0, v: 0.0, t: 0.0,
+            T: 0.0, V: 0.0, L: 0.0, H: 0.0
+        };
+
+        let animationId = null;
+        let lastTimestamp = 0;
+        const springAnchorX = -3; 
+
+        // DOM Elements (sliders, spans, buttons)
+        const massSlider = document.getElementById('mass');
+        const kSlider = document.getElementById('springConstant');
+        const x0Slider = document.getElementById('initialPosition');
+        const v0Slider = document.getElementById('initialVelocity');
+        const massValueSpan = document.getElementById('massValue');
+        const kValueSpan = document.getElementById('kValue');
+        const x0ValueSpan = document.getElementById('x0Value');
+        const v0ValueSpan = document.getElementById('v0Value');
+        const currentXSpan = document.getElementById('currentX');
+        const currentVSpan = document.getElementById('currentV');
+        const kineticEnergySpan = document.getElementById('kineticEnergy');
+        const potentialEnergySpan = document.getElementById('potentialEnergy');
+        const lagrangianSpan = document.getElementById('lagrangian');
+        const hamiltonianSpan = document.getElementById('hamiltonian');
+        const currentTimeSpan = document.getElementById('currentTime');
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const resetButton = document.getElementById('resetButton');
+        const canvasContainer = document.getElementById('canvasContainer');
+        const simulationCanvas = document.getElementById('simulationCanvas');
+
+        // Initialization
+        function init() {
+            setupThreeJS();
+            setupControls();
+            setupCharts(); 
+            resetSimulation(); 
+            window.addEventListener('resize', onWindowResize, false);
+            onWindowResize(); 
+        }
+
+        function setupThreeJS() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf0f0f0); 
+
+            const aspect = canvasContainer.clientWidth / canvasContainer.clientHeight;
+            const frustumSize = 10; 
+            camera = new THREE.OrthographicCamera(frustumSize * aspect / -2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / -2, 0.1, 1000);
+            camera.position.set(0, 0, 10); 
+            camera.lookAt(scene.position); 
+
+            renderer = new THREE.WebGLRenderer({ canvas: simulationCanvas, antialias: true });
+            renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio); 
+            
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7); 
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.9); 
+            directionalLight.position.set(5, 10, 7.5); 
+            scene.add(directionalLight);
+
+            const anchorGeo = new THREE.BoxGeometry(0.5, 4, 0.5); 
+            const anchorMat = new THREE.MeshStandardMaterial({ color: 0x666666 }); 
+            anchorMesh = new THREE.Mesh(anchorGeo, anchorMat);
+            anchorMesh.position.set(springAnchorX - 0.25, 0, 0); 
+            scene.add(anchorMesh);
+            
+            const massGeo = new THREE.SphereGeometry(0.5, 32, 32); 
+            const massMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, metalness: 0.3, roughness: 0.4 }); 
+            massMesh = new THREE.Mesh(massGeo, massMat);
+            scene.add(massMesh);
+
+            const springRadius = 0.15;
+            const springGeo = new THREE.CylinderGeometry(springRadius, springRadius, 1, 16, 1, false); 
+            const springMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 0.5, roughness: 0.5 }); 
+            springMesh = new THREE.Mesh(springGeo, springMat);
+            springMesh.rotation.z = Math.PI / 2; 
+            scene.add(springMesh);
+
+            updateVisuals(); 
+        }
+
+        function createChart(canvasId, label, borderColor, yAxisLabel) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            return new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [], 
+                    datasets: [{
+                        label: label,
+                        data: [], 
+                        borderColor: borderColor,
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.1, 
+                        pointRadius: 0, 
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false, 
+                    animation: false, 
+                    scales: {
+                        x: {
+                            type: 'linear', 
+                            title: { display: true, text: 'Time (s)' },
+                            ticks: { maxTicksLimit: 10 } 
+                        },
+                        y: {
+                            title: { display: true, text: yAxisLabel },
+                            ticks: { precision: 2 } 
+                        }
+                    },
+                    plugins: {
+                        legend: { display: true, position: 'top' },
+                        title: { display: true, text: label + ' vs. Time' }
+                    }
+                }
+            });
+        }
+
+        function setupCharts() {
+            positionChart = createChart('positionChart', 'Position (x)', 'rgba(54, 162, 235, 1)', 'Position (m)');
+            velocityChart = createChart('velocityChart', 'Velocity (v)', 'rgba(255, 99, 132, 1)', 'Velocity (m/s)');
+            kineticEnergyChart = createChart('kineticEnergyChart', 'Kinetic Energy (T)', 'rgba(75, 192, 192, 1)', 'Energy (J)');
+            potentialEnergyChart = createChart('potentialEnergyChart', 'Potential Energy (V)', 'rgba(153, 102, 255, 1)', 'Energy (J)');
+            lagrangianChart = createChart('lagrangianChart', 'Lagrangian (L)', 'rgba(255, 159, 64, 1)', 'Energy (J)');
+            hamiltonianChart = createChart('hamiltonianChart', 'Hamiltonian (H)', 'rgba(255, 205, 86, 1)', 'Energy (J)');
+        }
+        
+        function updateChartData(chart, time, value) {
+            chart.data.labels.push(time);
+            chart.data.datasets[0].data.push(value);
+
+            if (chart.data.labels.length > chartMaxDataPoints) {
+                chart.data.labels.shift();
+                chart.data.datasets[0].data.shift();
+            }
+            chart.update('none'); 
+        }
+
+        function resetCharts() {
+            const charts = [positionChart, velocityChart, kineticEnergyChart, potentialEnergyChart, lagrangianChart, hamiltonianChart];
+            charts.forEach(chart => {
+                if (chart) { 
+                    chart.data.labels = [];
+                    chart.data.datasets.forEach(dataset => dataset.data = []);
+                    chart.update('none');
+                }
+            });
+        }
+
+        function setupControls() {
+            massSlider.addEventListener('input', (e) => { params.m = parseFloat(e.target.value); massValueSpan.textContent = params.m.toFixed(1); if (!animationId) resetSimulation(); });
+            kSlider.addEventListener('input', (e) => { params.k = parseFloat(e.target.value); kValueSpan.textContent = params.k.toFixed(0); if (!animationId) resetSimulation(); });
+            x0Slider.addEventListener('input', (e) => { params.x0 = parseFloat(e.target.value); x0ValueSpan.textContent = params.x0.toFixed(1); if (!animationId) resetSimulation(); });
+            v0Slider.addEventListener('input', (e) => { params.v0 = parseFloat(e.target.value); v0ValueSpan.textContent = params.v0.toFixed(1); if (!animationId) resetSimulation(); });
+
+            startButton.addEventListener('click', startSimulation);
+            stopButton.addEventListener('click', stopSimulation);
+            resetButton.addEventListener('click', resetSimulation);
+
+            massValueSpan.textContent = params.m.toFixed(1);
+            kValueSpan.textContent = params.k.toFixed(0);
+            x0ValueSpan.textContent = params.x0.toFixed(1);
+            v0ValueSpan.textContent = params.v0.toFixed(1);
+        }
+
+        function resetSimulation() {
+            stopSimulation(); 
+            state.x = params.x0;
+            state.v = params.v0;
+            state.t = 0;
+            lastTimestamp = 0; 
+            updatePhysics(0); 
+            updateVisuals();
+            updateDataDisplay(); 
+            resetCharts(); 
+            if (renderer && scene && camera) renderer.render(scene, camera); 
+        }
+
+        function startSimulation() {
+            if (!animationId) { 
+                if (lastTimestamp === 0) { 
+                    state.x = params.x0;
+                    state.v = params.v0;
+                    state.t = 0;
+                    resetCharts(); 
+                }
+                lastTimestamp = performance.now(); 
+                animate(); 
+                startButton.disabled = true;
+                stopButton.disabled = false;
+            }
+        }
+
+        function stopSimulation() {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+                startButton.disabled = false;
+                stopButton.disabled = true;
+            }
+        }
+        
+        function updatePhysics(dt) {
+            if (dt > 0) { 
+                const force = -params.k * state.x; 
+                const acceleration = force / params.m; 
+                
+                state.v += acceleration * dt;
+                state.x += state.v * dt;
+                state.t += dt;
+            }
+
+            state.T = 0.5 * params.m * state.v * state.v;
+            state.V = 0.5 * params.k * state.x * state.x;
+            state.L = state.T - state.V;
+            state.H = state.T + state.V; 
+        }
+
+        function updateVisuals() {
+            if (!massMesh || !springMesh) return; 
+
+            massMesh.position.x = state.x;
+
+            const springVisualLength = state.x - springAnchorX;
+            springMesh.scale.y = Math.max(0.1, springVisualLength); 
+            springMesh.position.x = springAnchorX + springVisualLength / 2; 
+        }
+
+        function updateDataDisplay() {
+            currentXSpan.textContent = state.x.toFixed(2);
+            currentVSpan.textContent = state.v.toFixed(2);
+            kineticEnergySpan.textContent = state.T.toFixed(2);
+            potentialEnergySpan.textContent = state.V.toFixed(2);
+            lagrangianSpan.textContent = state.L.toFixed(2);
+            hamiltonianSpan.textContent = state.H.toFixed(2);
+            currentTimeSpan.textContent = state.t.toFixed(2);
+
+            if (animationId) { 
+                updateChartData(positionChart, state.t, state.x);
+                updateChartData(velocityChart, state.t, state.v);
+                updateChartData(kineticEnergyChart, state.t, state.T);
+                updateChartData(potentialEnergyChart, state.t, state.V);
+                updateChartData(lagrangianChart, state.t, state.L);
+                updateChartData(hamiltonianChart, state.t, state.H);
+            }
+        }
+
+        function animate() {
+            animationId = requestAnimationFrame(animate); 
+
+            const now = performance.now();
+            let dt = (now - (lastTimestamp || now)) / 1000; 
+            lastTimestamp = now;
+            
+            dt = Math.min(dt, 1/30); 
+
+            updatePhysics(dt);
+            updateVisuals();
+            updateDataDisplay(); 
+            
+            if (renderer && scene && camera) renderer.render(scene, camera); 
+        }
+
+        function onWindowResize() {
+            const newWidth = canvasContainer.clientWidth;
+            const newHeight = canvasContainer.clientHeight;
+
+            if (newWidth === 0 || newHeight === 0 || !renderer || !camera) return; 
+
+            renderer.setSize(newWidth, newHeight); 
+            
+            const aspect = newWidth / newHeight;
+            const frustumSize = 10; 
+            camera.left = frustumSize * aspect / -2;
+            camera.right = frustumSize * aspect / 2;
+            camera.top = frustumSize / 2;
+            camera.bottom = frustumSize / -2;
+            camera.updateProjectionMatrix(); 
+            
+            if (!animationId && renderer && scene && camera) { 
+                 renderer.render(scene, camera);
+            }
+        }
+        init();
+    </script>
+</body>
+</html>
